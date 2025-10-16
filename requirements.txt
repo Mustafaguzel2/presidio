@@ -1,0 +1,32 @@
+# Presidio PII Analyzer - Dependencies
+# All packages are already installed in your venv
+
+# Core PII Detection & Masking
+presidio-analyzer>=2.2.0
+presidio-anonymizer>=2.2.0
+
+# NLP (Natural Language Processing)
+spacy>=3.7.0
+
+# PDF Support
+PyPDF2>=3.0.0
+pdfplumber>=0.10.0
+reportlab>=4.0.0
+
+# Image/OCR Support
+Pillow>=10.0.0
+pytesseract>=0.3.0
+
+# Data Processing
+pandas>=2.1.0
+openpyxl>=3.1.0
+
+# Utilities
+colorama>=0.4.0
+tqdm>=4.60.0
+
+# Note: After installing, also run:
+# python -m spacy download en_core_web_lg
+
+# Always activate the virtual environment first
+# source venv/bin/activate
