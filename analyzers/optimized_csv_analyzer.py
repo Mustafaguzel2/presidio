@@ -1,21 +1,24 @@
 """
-CSV Analyzer Module
-Analyzes CSV files for PII using Presidio
+Optimized CSV Analyzer Module (Uses Singleton)
+Analyzes CSV files for PII using shared Presidio engines
 """
 
 import pandas as pd
 from typing import List, Dict, Any, Optional
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
+from .singleton_analyzers import get_analyzer_singleton
 
 
-class CSVAnalyzer:
-    """Analyzes CSV files for Personally Identifiable Information (PII)"""
+class OptimizedCSVAnalyzer:
+    """
+    Analyzes CSV files for Personally Identifiable Information (PII).
+    Uses singleton pattern for shared Presidio engines - much faster for APIs!
+    """
     
     def __init__(self):
-        """Initialize the CSV analyzer with Presidio engines"""
-        self.analyzer = AnalyzerEngine()
-        self.anonymizer = AnonymizerEngine()
+        """Initialize with shared analyzer engines"""
+        self.singleton = get_analyzer_singleton()
+        self.analyzer = self.singleton.analyzer
+        self.anonymizer = self.singleton.anonymizer
     
     def read_csv(self, csv_path: str, encoding: str = 'utf-8') -> pd.DataFrame:
         """
@@ -44,7 +47,7 @@ class CSVAnalyzer:
     def analyze_text(self, text: str, language: str = "en", threshold: float = 0.35,
                      entities: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Analyze text for PII using Presidio
+        Analyze text for PII using Presidio (shared engine)
         
         Args:
             text: Text to analyze
@@ -62,7 +65,7 @@ class CSVAnalyzer:
         results = self.analyzer.analyze(
             text=text_str,
             language=language,
-            entities=entities,  # Detect specified entities or all if None
+            entities=entities,
             score_threshold=threshold
         )
         
@@ -127,7 +130,7 @@ class CSVAnalyzer:
                     "has_pii": True,
                     "pii_count": len(column_pii),
                     "pii_types": pii_types,
-                    "all_findings": column_pii  # All findings, not just samples
+                    "all_findings": column_pii
                 }
             else:
                 column_results[column] = {

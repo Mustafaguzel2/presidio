@@ -11,9 +11,9 @@ import os
 from pathlib import Path
 from colorama import Fore, Style, init
 
-from analyzers.pdf_analyzer import PDFAnalyzer
-from analyzers.image_analyzer import ImageAnalyzer
-from analyzers.csv_analyzer import CSVAnalyzer
+from analyzers.optimized_pdf_analyzer import OptimizedPDFAnalyzer
+from analyzers.optimized_image_analyzer import OptimizedImageAnalyzer
+from analyzers.optimized_csv_analyzer import OptimizedCSVAnalyzer
 from maskers.pdf_masker import PDFMasker
 from maskers.image_masker import ImageMasker
 
@@ -155,7 +155,7 @@ class PresidioAnalyzerCLI:
         try:
             if file_type == 'pdf':
                 if not self.pdf_analyzer:
-                    self.pdf_analyzer = PDFAnalyzer()
+                    self.pdf_analyzer = OptimizedPDFAnalyzer()
                 results = self.pdf_analyzer.analyze_pdf(file_path, anonymize=anonymize, threshold=threshold, entities=entities)
                 results['file_type'] = 'pdf'
                 results['entities_filter'] = entities if entities else 'all'
@@ -178,7 +178,7 @@ class PresidioAnalyzerCLI:
             
             elif file_type == 'image':
                 if not self.image_analyzer:
-                    self.image_analyzer = ImageAnalyzer()
+                    self.image_analyzer = OptimizedImageAnalyzer()
                 results = self.image_analyzer.analyze_image(file_path, anonymize=anonymize, threshold=threshold, entities=entities)
                 results['file_type'] = 'image'
                 results['entities_filter'] = entities if entities else 'all'
@@ -206,7 +206,7 @@ class PresidioAnalyzerCLI:
             
             elif file_type == 'csv':
                 if not self.csv_analyzer:
-                    self.csv_analyzer = CSVAnalyzer()
+                    self.csv_analyzer = OptimizedCSVAnalyzer()
                 
                 # Generate output filename if not provided
                 if anonymize and not output_file:
