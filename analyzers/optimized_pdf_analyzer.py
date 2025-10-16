@@ -1,70 +1,52 @@
 """
-Image Analyzer Module
-Analyzes images for PII using OCR and Presidio
+Optimized PDF Analyzer Module (Uses Singleton)
+Analyzes PDF files for PII using shared Presidio engines
 """
 
-import pytesseract
-from PIL import Image
+import pdfplumber
 from typing import List, Dict, Any
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
+from .singleton_analyzers import get_analyzer_singleton
 
 
-class ImageAnalyzer:
-    """Analyzes images for Personally Identifiable Information (PII) using OCR"""
+class OptimizedPDFAnalyzer:
+    """
+    Analyzes PDF files for Personally Identifiable Information (PII).
+    Uses singleton pattern for shared Presidio engines - much faster for APIs!
+    """
     
     def __init__(self):
-        """Initialize the Image analyzer with Presidio engines"""
-        self.analyzer = AnalyzerEngine()
-        self.anonymizer = AnonymizerEngine()
+        """Initialize with shared analyzer engines"""
+        self.singleton = get_analyzer_singleton()
+        self.analyzer = self.singleton.analyzer
+        self.anonymizer = self.singleton.anonymizer
     
-    def extract_text_from_image(self, image_path: str) -> str:
+    def extract_text_from_pdf(self, pdf_path: str) -> str:
         """
-        Extract text from an image using OCR (Tesseract)
+        Extract text content from a PDF file
         
         Args:
-            image_path: Path to the image file
+            pdf_path: Path to the PDF file
             
         Returns:
             Extracted text as a string
         """
-        try:
-            # Open image
-            image = Image.open(image_path)
-            
-            # Perform OCR
-            text = pytesseract.image_to_string(image)
-            
-            return text.strip()
-        except Exception as e:
-            raise Exception(f"Error extracting text from image: {str(e)}")
-    
-    def get_image_info(self, image_path: str) -> Dict[str, Any]:
-        """
-        Get basic information about the image
+        text_content = []
         
-        Args:
-            image_path: Path to the image file
-            
-        Returns:
-            Dictionary with image metadata
-        """
         try:
-            image = Image.open(image_path)
-            return {
-                "format": image.format,
-                "mode": image.mode,
-                "size": image.size,
-                "width": image.width,
-                "height": image.height
-            }
+            with pdfplumber.open(pdf_path) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_content.append(page_text)
         except Exception as e:
-            return {"error": str(e)}
+            raise Exception(f"Error extracting text from PDF: {str(e)}")
+        
+        return "\n\n".join(text_content)
     
-    def analyze_text(self, text: str, language: str = "en", threshold: float = 0.35,
+    def analyze_text(self, text: str, language: str = "en", threshold: float = 0.35, 
                      entities: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Analyze text for PII using Presidio
+        Analyze text for PII using Presidio (shared engine)
         
         Args:
             text: Text to analyze
@@ -75,13 +57,10 @@ class ImageAnalyzer:
         Returns:
             List of detected PII entities
         """
-        if not text or not text.strip():
-            return []
-        
         results = self.analyzer.analyze(
             text=text,
             language=language,
-            entities=entities,  # Detect specified entities or all if None
+            entities=entities,
             score_threshold=threshold
         )
         
@@ -109,13 +88,10 @@ class ImageAnalyzer:
         Returns:
             Anonymized text
         """
-        if not analyzer_results:
-            return text
-        
         # Convert dict results back to RecognizerResult objects if needed
         from presidio_analyzer import RecognizerResult
         
-        if isinstance(analyzer_results[0], dict):
+        if analyzer_results and isinstance(analyzer_results[0], dict):
             recognizer_results = [
                 RecognizerResult(
                     entity_type=result["entity_type"],
@@ -135,13 +111,13 @@ class ImageAnalyzer:
         
         return anonymized_result.text
     
-    def analyze_image(self, image_path: str, anonymize: bool = False, threshold: float = 0.35,
-                      entities: List[str] = None) -> Dict[str, Any]:
+    def analyze_pdf(self, pdf_path: str, anonymize: bool = False, threshold: float = 0.35,
+                    entities: List[str] = None) -> Dict[str, Any]:
         """
-        Complete image analysis workflow
+        Complete PDF analysis workflow
         
         Args:
-            image_path: Path to the image file
+            pdf_path: Path to the PDF file
             anonymize: Whether to generate anonymized version
             threshold: Minimum confidence score (0.0-1.0, default: 0.35)
             entities: List of entity types to detect (None = all entities)
@@ -149,19 +125,15 @@ class ImageAnalyzer:
         Returns:
             Dictionary containing analysis results
         """
-        # Get image info
-        image_info = self.get_image_info(image_path)
-        
-        # Extract text via OCR
-        text = self.extract_text_from_image(image_path)
+        # Extract text
+        text = self.extract_text_from_pdf(pdf_path)
         
         # Analyze for PII
         pii_findings = self.analyze_text(text, threshold=threshold, entities=entities)
         
         result = {
-            "file_path": image_path,
-            "image_info": image_info,
-            "extracted_text": text,
+            "file_path": pdf_path,
+            "original_text": text,
             "pii_found": len(pii_findings) > 0,
             "pii_count": len(pii_findings),
             "pii_findings": pii_findings
